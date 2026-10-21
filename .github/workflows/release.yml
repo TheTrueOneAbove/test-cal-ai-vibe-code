@@ -1,0 +1,107 @@
+name: Build & Publish Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+      release_title:
+        description: 'Release Title'
+        required: false
+        default: 'Cal AI v1.0.0 - Production Release'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build APK and Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Environment & Keystore
+        run: |
+          # Ensure .env exists from template
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+          
+          # Restore debug keystore from base64 if present
+          if [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+          
+          chmod +x gradlew
+
+      - name: Build Debug APK
+        run: |
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Prepare Release Artifacts
+        id: prepare_artifact
+        run: |
+          mkdir -p release-artifacts
+          # Locate built APK
+          APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "Error: No APK found after build!"
+            exit 1
+          fi
+          
+          # Copy with clean display name
+          cp "$APK_PATH" release-artifacts/CalAI-Android.apk
+          echo "apk_path=release-artifacts/CalAI-Android.apk" >> $GITHUB_OUTPUT
+          
+          # Determine tag
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag_name }}" ]; then
+            RELEASE_TAG="${{ github.event.inputs.tag_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            RELEASE_TAG="${GITHUB_REF#refs/tags/}"
+          else
+            RELEASE_TAG="v1.0.${{ github.run_number }}"
+          fi
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release and Upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prepare_artifact.outputs.release_tag }}
+          name: ${{ github.event.inputs.release_title || steps.prepare_artifact.outputs.release_tag }}
+          draft: false
+          prerelease: false
+          files: ${{ steps.prepare_artifact.outputs.apk_path }}
+          body: |
+            ### 🥑 Cal AI — Android Release
+            
+            **APK Download:** [CalAI-Android.apk](https://github.com/${{ github.repository }}/releases/download/${{ steps.prepare_artifact.outputs.release_tag }}/CalAI-Android.apk)
+
+            #### Features in this build:
+            - **Google Gemini Multimodal AI**: Natural language meal analysis and photo nutrition parsing.
+            - **CameraX Food Scanner**: Instant meal capture with viewfinder, torch toggle, and review interface.
+            - **Interactive Dashboard**: Circular Calorie progress ring and high-contrast macro bars (Protein, Carbs, Fats).
+            - **Offline Room Database**: Full history of logged meals with local persistence.
+            - **Adjustable Targets**: Personal daily calorie and macronutrient goal customization.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
