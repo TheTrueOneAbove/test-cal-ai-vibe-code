@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Cal AI</string>
+    <string name="daily_summary">Daily Summary</string>
+    <string name="calories">Calories</string>
+    <string name="protein">Protein</string>
+    <string name="carbs">Carbs</string>
+    <string name="fats">Fats</string>
+    <string name="log_meal">Log Meal</string>
+    <string name="scan_food">Scan Food</string>
+    <string name="scan_with_camera">Scan with Camera</string>
+    <string name="type_or_describe">Describe your meal…</string>
+    <string name="analyzing_with_ai">AI is analyzing your meal…</string>
+    <string name="today_meals">Today’s Meals</string>
+    <string name="no_meals_logged">No meals logged yet today. Tap + to scan or describe your food!</string>
+</resources>

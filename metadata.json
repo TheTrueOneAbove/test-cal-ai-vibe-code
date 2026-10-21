@@ -1,0 +1,10 @@
+{
+  "name": "Cal AI",
+  "description": "AI-powered calorie and macronutrient tracker with CameraX food scanning, natural language meal logging, and offline Room database history.",
+  "requestFramePermissions": [
+    "android.permission.CAMERA"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
